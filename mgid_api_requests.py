@@ -123,4 +123,4 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 			else:
 				print('Site Stats: ' + str(response.status_code))
 
-
+# TODO Функция проверки сайтов по заданным параметрам

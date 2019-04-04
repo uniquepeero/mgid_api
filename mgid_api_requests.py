@@ -1,6 +1,8 @@
 import requests
 import json
 
+APIURL = 'https://api.mgid.com/v1'
+
 #Authenticate and get 'token', 'refreshToken', 'idAuth'. Returns in dict
 def auth():
 	headers = {
@@ -11,9 +13,7 @@ def auth():
 		"email": "advertcombo@gmail.com",
 		"password": "letsbombnatiVE05"
 	}
-	url = 'https://api.mgid.com/v1/auth/token'
-
-	response = requests.post(url, headers=headers, data=json.dumps(payload))
+	response = requests.post(f'{APIURL}/auth/token', headers=headers, data=json.dumps(payload))
 	if response.status_code == 200:
 		return response.json()
 	else:
@@ -25,8 +25,7 @@ def user_campaigns(camp_id=None):
 		'Accept': 'application/json'
 	}
 	if camp_id is not None:
-		url = 'https://api.mgid.com/v1/goodhits/clients/' + str(auth()['idAuth']) + \
-			'/campaigns/' + str(camp_id) + '?token=' + str(auth()['token'])
+		url = f'''{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/{camp_id}?token={auth()['token']}'''
 		response = requests.get(url, headers=headers)
 		if response.status_code == 200:
 			return response.json()
@@ -34,8 +33,7 @@ def user_campaigns(camp_id=None):
 			print('user_campaigns(camp_id): ' + str(response.status_code))
 
 	if camp_id is None:
-		url = 'https://api.mgid.com/v1/goodhits/clients/' + str(auth()['idAuth']) + \
-			'/campaigns/?token=' + str(auth()['token'])
+		url = f'''{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/?token={auth()['token']}'''
 		response = requests.get(url, headers=headers)
 		if response.status_code == 200:
 			return response.json()
@@ -48,18 +46,16 @@ def user_teasers(teaser_id=None):
 		'Accept': 'application/json'
 	}
 	if teaser_id is not None:
-		url = 'https://api.mgid.com/v1/goodhits/clients/' + str(auth()['idAuth']) + \
-			'/teasers/?token=' + str(auth()['token'])
-		response = requests.get(url, headers=headers)
+		response = requests.get(f'''{APIURL}/goodhits/clients/{auth()['idAuth']} \
+			/teasers/{teaser_id}?token={auth()['token']}''', headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
 			print('user_teasers(teaser_id): ' + str(response.status_code))
 
 	if teaser_id is None:
-		url = 'https://api.mgid.com/v1/goodhits/clients/' + str(auth()['idAuth']) + \
-			'/teasers/' + '?token=' + str(auth()['token'])
-		response = requests.get(url, headers=headers)
+		response = requests.get(f'''{APIURL}/goodhits/clients/{auth()['idAuth']} \
+			/teasers/?token=auth()['token']''', headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
@@ -67,10 +63,8 @@ def user_teasers(teaser_id=None):
 
 #Exclude site from campaign and print result
 def disable_sites(uid, camp_id):
-	url = 'https://api.mgid.com/v1/goodhits/clients/' + str(auth()['idAuth']) + \
-		'/campaigns/501895?token=' + str(auth()['token']) + '&widgetsFilterUid=exclude,only,' + str(uid)
-
-	response = requests.patch(url).json()
+	response = requests.patch(f'''{APIURL}/goodhits/clients/auth()['idAuth'] \
+		/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}''').json()
 	if response['id'] == camp_id:
 		print('Site ' + str(uid) + 'disabled in campaign ' + str(camp_id))
 	else:
@@ -83,20 +77,16 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 	}
 	if uid is None:
 		if dateinterval is None:
-			url = 'https://api.mgid.com/v1/goodhits/campaigns/' + str(camp_id) + \
-				'/quality-analysis/?token=' + str(auth()['token'])
 
-			response = requests.get(url, headers=headers)
+			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/?token={auth()['token']}''', headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
 				print('Site Stats: ' + str(response.status_code))
 		else:
-			url = 'https://api.mgid.com/v1/goodhits/campaigns/' + str(camp_id) + \
-				'/quality-analysis/?token=' + str(auth()['token']) + \
-				'&dateInterval=' + dateinterval
-
-			response = requests.get(url, headers=headers)
+			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/?token={auth()['token']}&dateInterval={dateinterval}''', headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
@@ -104,23 +94,22 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 
 	else:
 		if dateinterval is None:
-			url = 'https://api.mgid.com/v1/goodhits/campaigns/' + str(camp_id) + \
-				'/quality-analysis/' + str(uid) + '?token=' + str(auth()['token'])
-
-			response = requests.get(url, headers=headers)
+			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/{uid}?token={auth()['token']}''', headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
 				print('Site Stats: ' + str(response.status_code))
 		else:
-			url = 'https://api.mgid.com/v1/goodhits/campaigns/' + str(camp_id) + \
-				'/quality-analysis/' + str(uid) + '?token=' + str(auth()['token']) + \
-				'&dateInterval=' + dateinterval
-
-			response = requests.get(url, headers=headers)
+			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} + \
+				/quality-analysis/{uid}?token={auth()['token']} \ 
+				&dateInterval={dateinterval}''', headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
 				print('Site Stats: ' + str(response.status_code))
 
 # TODO Функция проверки сайтов по заданным параметрам
+
+#print(site_stats(582530))
+#print(user_campaigns(582530))

@@ -17,7 +17,7 @@ def auth():
 	if response.status_code == 200:
 		return response.json()
 	else:
-		print('auth(): ' + str(response.status_code))
+		print(f'auth(): {response.status_code}')
 
 #Get specific campaign info if camp_id is provided or return all user campaigns. Returns in dict
 def user_campaigns(camp_id=None):
@@ -25,20 +25,20 @@ def user_campaigns(camp_id=None):
 		'Accept': 'application/json'
 	}
 	if camp_id is not None:
-		url = f'''{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/{camp_id}?token={auth()['token']}'''
+		url = f"{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/{camp_id}?token={auth()['token']}"
 		response = requests.get(url, headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
-			print('user_campaigns(camp_id): ' + str(response.status_code))
+			print(f'user_campaigns(camp_id): {response.status_code}')
 
 	if camp_id is None:
-		url = f'''{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/?token={auth()['token']}'''
+		url = f"{APIURL}/goodhits/clients/{auth()['idAuth']}/campaigns/?token={auth()['token']}"
 		response = requests.get(url, headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
-			print('user_campaigns(None): ' + str(response.status_code))
+			print(f'user_campaigns(None): {response.status_code}')
 
 #Get specific teaser info if teaser_id is provided or return all user teasers. Returns in dict
 def user_teasers(teaser_id=None):
@@ -46,27 +46,27 @@ def user_teasers(teaser_id=None):
 		'Accept': 'application/json'
 	}
 	if teaser_id is not None:
-		response = requests.get(f'''{APIURL}/goodhits/clients/{auth()['idAuth']} \
-			/teasers/{teaser_id}?token={auth()['token']}''', headers=headers)
+		response = requests.get(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+			/teasers/{teaser_id}?token={auth()['token']}", headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
-			print('user_teasers(teaser_id): ' + str(response.status_code))
+			print(f'user_teasers(teaser_id): {response.status_code}')
 
 	if teaser_id is None:
-		response = requests.get(f'''{APIURL}/goodhits/clients/{auth()['idAuth']} \
-			/teasers/?token=auth()['token']''', headers=headers)
+		response = requests.get(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+			/teasers/?token=auth()['token']", headers=headers)
 		if response.status_code == 200:
 			return response.json()
 		else:
-			print('user_teasers(None): ' + str(response.status_code))
+			print(f'user_teasers(None): {response.status_code}')
 
 #Exclude site from campaign and print result
 def disable_sites(uid, camp_id):
-	response = requests.patch(f'''{APIURL}/goodhits/clients/auth()['idAuth'] \
-		/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}''').json()
+	response = requests.patch(f"{APIURL}/goodhits/clients/auth()['idAuth'] \
+		/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}").json()
 	if response['id'] == camp_id:
-		print('Site ' + str(uid) + 'disabled in campaign ' + str(camp_id))
+		print(f'Site {uid} disabled in campaign {camp_id}')
 	else:
 		print(response)
 
@@ -78,38 +78,50 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 	if uid is None:
 		if dateinterval is None:
 
-			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
-				/quality-analysis/?token={auth()['token']}''', headers=headers)
+			response = requests.get(f"{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/?token={auth()['token']}", headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
-				print('Site Stats: ' + str(response.status_code))
+				print(f'Site Stats: {response.status_code}')
 		else:
-			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
-				/quality-analysis/?token={auth()['token']}&dateInterval={dateinterval}''', headers=headers)
+			response = requests.get(f"{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/?token={auth()['token']}&dateInterval={dateinterval}", headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
-				print('Site Stats: ' + str(response.status_code))
+				print(f'Site Stats: {response.status_code}')
 
 	else:
 		if dateinterval is None:
-			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} \
-				/quality-analysis/{uid}?token={auth()['token']}''', headers=headers)
+			response = requests.get(f"{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/{uid}?token={auth()['token']}", headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
-				print('Site Stats: ' + str(response.status_code))
+				print(f'Site Stats: {response.status_code}')
 		else:
-			response = requests.get(f'''{APIURL}/goodhits/campaigns/{camp_id} + \
-				/quality-analysis/{uid}?token={auth()['token']} \ 
-				&dateInterval={dateinterval}''', headers=headers)
+			response = requests.get(f"{APIURL}/goodhits/campaigns/{camp_id} \
+				/quality-analysis/{uid}?token={auth()['token']} \
+				&dateInterval={dateinterval}", headers=headers)
 			if response.status_code == 200:
 				return response.json()
 			else:
-				print('Site Stats: ' + str(response.status_code))
+				print(f'Site Stats: {response.status_code}')
 
-# TODO Функция проверки сайтов по заданным параметрам
+# Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
+def check_sites(stat, profit=None):
+	# Отформатированный список без camp id и даты
+	f_stat = stat[list(stat.keys())[0]]
+	f_stat = f_stat[list(f_stat.keys())[0]]
+	print(f_stat)
 
-#print(site_stats(582530))
-#print(user_campaigns(582530))
+
+check_sites(site_stats(582530))
+
+# TODO Функция проверки сайтов по заданным параметрам - check_sites
+# TODO Функция проверки хороших площадок
+# TODO Функция увеличения коэф. хороших площадок
+# TODO Функция отслеживания изменений по хорошим площадкам \
+#  - записали значения до увеличения коэфа и сравнили их через неделю
+									

@@ -3,12 +3,13 @@ import json
 import logging
 import pickle
 import os
+import datetime
 
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
-fh = logging.FileHandler("logs.log", "w", "utf-8")  # w - перезаписывает файл. TODO Удалить при установке
+log.setLevel(logging.DEBUG)  # w - перезаписывает файл. DEBUGOFF Удалить w при установке и повысить до INFO
+fh = logging.FileHandler("logs.log", "w", "utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 log.addHandler(fh)
@@ -188,29 +189,79 @@ def check_sites(stat, profit=None):
 	# В циклах проверяем каждую площадку по прописанным условиям
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
-def check_teasers(tsrs, profit):
+def check_teasers(tsrs, profit, camp_id):
 	highest_conv = 0
-	highest_roi = 0
+	highest_roi = -10
 	highest_id = 0
+	file = f'{camp_id}.data'
+	# Если файла с названием РК нет -
+	# - создаем и записываем туда словарь тизеров с ключом даты у каждого тизера
+	if not os.path.exists(file):
+		try:
+			dict_todump = tsrs.copy()
+			for key, value in dict_todump.items():
+				value['date'] = datetime.datetime.today().strftime('%Y.%m.%d-%H:%M')
+			with open(file, 'wb') as f:
+				pickle.dump(dict_todump, f)
+			del dict_todump
+			log.debug(f'Успешно загружен в .data')
+		except Exception as e:
+			log.error(f'Dict dump: {e}')
+	else:
+		try:
+			# Загружаем в словарь данные из файла
+			with open(file, 'rb') as f:
+				dict_fromdump = pickle.load(f)
+			nowtime = datetime.datetime.now()
+			# По каждому тизеру из старых данных проверяем
+			for key, value in dict_fromdump.items():
+				try:
+					oldtime = datetime.datetime.strptime(value['date'], '%Y.%m.%d-%H:%M')
+					delta = nowtime - oldtime
+					log.debug(f'Delta {delta} = nowtime {nowtime} - oldtime {oldtime}')
+					log.debug(f'Min Delta {delta.seconds // 60}')
+					log.debug(f'Daya delta {delta.days}')  # Может быть здесь будет 3.5 - тогда исп-ть ее
+					if (delta.seconds // 60) > 5040:
+						log.debug('ПРОШЛО 3.5 ДНЯ')
+						# По каждому тизеру из нынешних данных проверяем
+						for key1, value1 in tsrs.items():
+							# Находим разницу в конверсиях и тратах
+							conv = value1['conversion']['buying_all'] - value['conversion']['buying_all']
+							spent = value1['statistics']['spent'] - value['statistics']['spent']
+							roi = (conv * profit - spent) / spent * 100
+							if conv > highest_conv and roi > highest_roi:
+								highest_conv = conv
+								highest_roi = roi
+								highest_id = value1['id']
+							log.debug(f'(conv {conv} * profit {profit} - spent {spent}) / spent {spent} * 100 = {roi}')
+						log.debug(f'{highest_conv} / {highest_roi} / {highest_id}')
+						if highest_conv > 1:  # TODO Изменить 1 на нужное число
+							# TODO Функция увеличения CPC тизера на определенное значение
+							# TODO Удаление старого .data файла
+							log.info(f'CPC Тизера {highest_id} увеличено на ')
+							pass
+					else:
+						log.debug('3.5 дня не прошло')
+						break
+
+				except Exception as e:
+					log.error(f'dict_fromdump: {e}')
+		except Exception as e:
+			log.error(f'Dict load: {e}')
+
 	for key, value in tsrs.items():
 		# CTR TASK 1
 		if value['statistics']['hits'] > 10000 and \
 			value['statistics']['clicks'] > 100 and float(value['statistics']['ctr']) < 0.2:
+			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 			#disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CTR TASK 1): {key}')
 		# CLICKS TASK 1
 		if value['statistics']['clicks'] > 100 and value['conversion']['buying_all'] == 0:
+			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
-		conv = value['conversion']['buying_all']
-		spent = value['statistics']['spent']
-		if conv > highest_conv and \
-			((conv * profit - spent) / spent * 100) > highest_roi:
-			highest_conv = conv
-			highest_roi = (conv * profit - spent) / spent * 100
-			log.debug(f'(conv {conv} * profit {profit} - spent {spent}) / spent {spent} * 100')
-			highest_id = value['id']
-		log.debug(f'{highest_conv} / {highest_roi} / {highest_id}')
+
 
 # Отключение тизера
 def disable_teaser(tsr_id):
@@ -248,7 +299,7 @@ if __name__ == '__main__':
 	# check_sites(site_stats(582530))
 
 	log.debug('Started')
-	check_teasers(user_teasers(582530), 5.97)
+	check_teasers(user_teasers(582530), 5.97, 582530)
 	#log.debug(f'{user_teasers(582530)}')
 	#store_data()
 	log.debug('Finished')

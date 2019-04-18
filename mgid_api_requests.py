@@ -179,14 +179,21 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 				log.critical(f'site_stats(uid,date): {e}')
 
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
-def check_sites(stat, profit=None):
+def check_sites(stat, profit):
 	# Отформатированный список без camp id и даты
 	f_stat = stat[list(stat.keys())[0]]
 	f_stat = f_stat[list(f_stat.keys())[0]]
-	log.debug(f_stat)
-	#for key, value in f_stat:
-	# Здесь нужно проверять наличие вложенных площадок и если они есть - в начале проходить циклом по ним
-	# В циклах проверяем каждую площадку по прописанным условиям
+	#log.debug(f_stat)
+	for key, value in f_stat.items():
+		# Если есть вложеные площадки - проходим по ним
+		if len(value['sources']) > 0:
+			sources = value['sources']
+			for key1, value1 in sources.items():
+				if sources['buy']:
+					log.debug(f'Site {key}')
+		# Здесь нужно проверять наличие вложенных площадок и если они есть - в начале проходить циклом по ним
+		# В циклах проверяем каждую площадку по прописанным условиям
+
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
 def check_teasers(tsrs, profit, camp_id):
@@ -236,10 +243,15 @@ def check_teasers(tsrs, profit, camp_id):
 							log.debug(f'(conv {conv} * profit {profit} - spent {spent}) / spent {spent} * 100 = {roi}')
 						log.debug(f'{highest_conv} / {highest_roi} / {highest_id}')
 						if highest_conv > 1:  # TODO Изменить 1 на нужное число
-							# TODO Функция увеличения CPC тизера на определенное значение
-							# TODO Удаление старого .data файла
-							log.info(f'CPC Тизера {highest_id} увеличено на ')
-							pass
+							# TODO Присваивать не только первое значение? Или среднее? Или страны будут только одни?
+							current_cpc = tsrs[highest_id]['priceOfClickByLocations'][0]['priceOfClick']
+							# Изменяем CPC. По стандарту на +0.5
+							change_cpc(highest_id, current_cpc)
+							# Удаляем старый файл
+							if os.path.isfile(file):
+								os.remove(file)
+							else:
+								log.error(f"{file} file not found for remove")
 					else:
 						log.debug('3.5 дня не прошло')
 						break
@@ -262,7 +274,6 @@ def check_teasers(tsrs, profit, camp_id):
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
 
-
 # Отключение тизера
 def disable_teaser(tsr_id):
 	try:
@@ -280,29 +291,28 @@ def disable_teaser(tsr_id):
 	except Exception as e:
 		log.critical(f'action_teaser: {e}')
 
-#Запись
-# time.strftime('%Y%m%d%H%M)
-def store_data(name, time, cnv, roi, obj):
-	name = f'{name}.data'
-
-	if not os.path.exists(name):
-		with open(name, 'rb') as f:
-			pickle.dump(obj, f)
-
-# Проверка тизеров по конкретным данным за определенный период
-#def watch_teasers(tsrs):
-	# Записываем данные наблюдаемых тизеров в файл в виде словаря. Дата - тизеры - их данные
-	# Достаем из файла данные по тизерам. Проверяем текующую дату, если прошло 84 часа (3.5 дня) - повышаем ставку
-	#pass
+# Изменение цены за клик для тизера
+def change_cpc(tsr_id, value, rate=0.5):
+	try:
+		response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']}\
+		/teasers/{tsr_id}?token={auth()['token']}&priceOfClickByLocation={value + rate}")
+		if response.status_code == requests.codes.ok:
+			response = response.json()
+			if response['id'] == tsr_id:
+				log.info(f'Changed teaser {tsr_id} cpc {value} to {value + rate}')
+			else:
+				log.warning(f'change_cpc response: {response}')
+		else:
+			log.error(f'change_cpc: {response.status_code}')
+	except Exception as e:
+		log.critical(f'change_cpc: {e}')
 
 if __name__ == '__main__':
-	# check_sites(site_stats(582530))
-
-	log.debug('Started')
-	check_teasers(user_teasers(582530), 5.97, 582530)
-	#log.debug(f'{user_teasers(582530)}')
-	#store_data()
-	log.debug('Finished')
+	log.info('Started')
+	check_sites(site_stats(582530))
+	# log.debug(f'{user_teasers(582530)}')
+	#check_teasers(user_teasers(582530), 5.97, 582530)
+	log.info('Finished')
 
 
 # TODO Функция проверки сайтов по заданным параметрам - check_sites

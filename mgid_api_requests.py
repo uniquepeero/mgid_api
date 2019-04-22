@@ -4,6 +4,7 @@ import logging
 import pickle
 import os
 import datetime
+import configparser
 
 APIURL = 'https://api.mgid.com/v1'
 
@@ -21,8 +22,8 @@ def auth():
 		'Accept': 'application/json'
 	}
 	payload = {
-		"email": "advertcombo@gmail.com",
-		"password": "letsbombnatiVE05"
+		"email": EMAIL,
+		"password": PASSWORD
 	}
 	try:
 		response = requests.post(f'{APIURL}/auth/token', headers=headers, data=json.dumps(payload))
@@ -181,7 +182,8 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
 def check_sites(stat, profit):
 	# Отформатированный список без camp id и даты
-	f_stat = stat[list(stat.keys())[0]]
+	camp_id = list(stat.keys())[0]
+	f_stat = stat[camp_id]
 	f_stat = f_stat[list(f_stat.keys())[0]]
 	#log.debug(f_stat)
 	for key, value in f_stat.items():
@@ -189,11 +191,14 @@ def check_sites(stat, profit):
 		if len(value['sources']) > 0:
 			sources = value['sources']
 			for key1, value1 in sources.items():
-				if sources['buy']:
-					log.debug(f'Site {key}')
-		# Здесь нужно проверять наличие вложенных площадок и если они есть - в начале проходить циклом по ним
-		# В циклах проверяем каждую площадку по прописанным условиям
-
+				if 'spent' in value1:
+					if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+						log.info(f'Site {key}s{key1} (spent {value1["spent"]} and buy or decision not found) is ready to disable')
+						#disable_sites(f"{key}s{key1}", camp_id) DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
+		if 'spent' in value:
+			if value['spent'] > 10 and ('buy' and 'decision' not in value):
+				log.info(f'Site {key} (spent {value["spent"]} and buy or decision not found) is ready to disable')
+				#disable_sites(f"{key}", camp_id) DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
 def check_teasers(tsrs, profit, camp_id):
@@ -228,14 +233,15 @@ def check_teasers(tsrs, profit, camp_id):
 					log.debug(f'Delta {delta} = nowtime {nowtime} - oldtime {oldtime}')
 					log.debug(f'Min Delta {delta.seconds // 60}')
 					log.debug(f'Daya delta {delta.days}')  # Может быть здесь будет 3.5 - тогда исп-ть ее
-					if (delta.seconds // 60) > 5040:
-						log.debug('ПРОШЛО 3.5 ДНЯ')
+					if delta.days > 3:
+						log.debug('ПРОШЛО 4 ДНЯ')
 						# По каждому тизеру из нынешних данных проверяем
 						for key1, value1 in tsrs.items():
 							# Находим разницу в конверсиях и тратах
 							conv = value1['conversion']['buying_all'] - value['conversion']['buying_all']
 							spent = value1['statistics']['spent'] - value['statistics']['spent']
 							roi = (conv * profit - spent) / spent * 100
+							#log.debug()
 							if conv > highest_conv and roi > highest_roi:
 								highest_conv = conv
 								highest_roi = roi
@@ -308,14 +314,21 @@ def change_cpc(tsr_id, value, rate=0.5):
 		log.critical(f'change_cpc: {e}')
 
 if __name__ == '__main__':
+	config = configparser.ConfigParser()
+	if os.path.isfile('config.ini'):
+		config.read('config.ini')
+	else:
+		log.critical('Config file (config.ini) not found')
+	EMAIL = config['MGID']['email']
+	PASSWORD = config['MGID']['password']
 	log.info('Started')
-	check_sites(site_stats(582530))
-	# log.debug(f'{user_teasers(582530)}')
-	#check_teasers(user_teasers(582530), 5.97, 582530)
+	#log.debug(site_stats(582530))
+	check_sites(site_stats(582530), 6)
+	#log.debug(f'{user_teasers(582530)}')
+	#check_teasers(user_teasers(582530), 6, 582530)
 	log.info('Finished')
 
 
-# TODO Функция проверки сайтов по заданным параметрам - check_sites
 # TODO Функция проверки хороших площадок
 # TODO Функция увеличения коэф. хороших площадок
 # TODO Функция отслеживания изменений по хорошим площадкам \

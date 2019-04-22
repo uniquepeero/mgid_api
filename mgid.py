@@ -323,12 +323,17 @@ if __name__ == '__main__':
 	PASSWORD = config['MGID']['password']
 	log.info('Started')
 	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
-	for camp in camplist:
-		check_sites(site_stats(camp))
+	try:
+		while True:
+			for camp in camplist:
+				check_sites(site_stats(camp))
+	except Exception as e:
+		log.critical(f'Main proccess error: {e}')
+	finally:
+		log.info('Finished')
 	#log.debug(site_stats(582530))
 	#log.debug(f'{user_teasers(582530)}')
 	#check_teasers(user_teasers(582530), 6, 582530)
-	log.info('Finished')
 
 
 # TODO Функция проверки хороших площадок

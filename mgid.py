@@ -9,13 +9,14 @@ import configparser
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)  # w - перезаписывает файл.
+log.setLevel(logging.DEBUG)  # w - перезаписывает файл.
 fh = logging.FileHandler("logs.log", encoding="utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 log.addHandler(fh)
 
-#Authenticate and get 'token', 'refreshToken', 'idAuth'. Returns in dict
+
+# Authenticate and get 'token', 'refreshToken', 'idAuth'. Returns in dict
 def auth():
 	headers = {
 		'Content-Type': 'application/json',
@@ -34,7 +35,8 @@ def auth():
 	except Exception as e:
 		log.critical(f'Auth query error: {e}')
 
-#Get specific campaign info if camp_id is provided or return all user campaigns. Returns in dict
+
+# Get specific campaign info if camp_id is provided or return all user campaigns. Returns in dict
 def user_campaigns(camp_id=None):
 	headers = {
 		'Accept': 'application/json'
@@ -62,7 +64,8 @@ def user_campaigns(camp_id=None):
 		except Exception as e:
 			log.critical(f'user_campaigns(): {e}')
 
-#Get specific ACTIVE teaser info if teaser_id is provided or return all user teasers. Returns in dict
+
+# Get specific ACTIVE teaser info if teaser_id is provided or return all user teasers. Returns in dict
 def user_teasers(campaign=None, teaser_id=None):
 	headers = {
 		'Accept': 'application/json'
@@ -113,7 +116,8 @@ def user_teasers(campaign=None, teaser_id=None):
 			except Exception as e:
 				log.critical(f'user_teasers(None): {e}')
 
-#Exclude site from campaign and print result
+
+# Exclude site from campaign and print result
 def disable_sites(uid, camp_id):
 	camp_id = str(camp_id)
 	with open('uids.data', 'rb') as f_out:
@@ -160,7 +164,8 @@ def disable_sites(uid, camp_id):
 	else:
 		del blackuids
 
-#Get campaigns statistics by sites include conversions. Returns in dict
+
+# Get campaigns statistics by sites include conversions. Returns in dict
 def site_stats(camp_id, uid=None, dateinterval=None):
 	headers = {
 		'Accept': 'application/json'
@@ -210,16 +215,18 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 			except Exception as e:
 				log.critical(f'site_stats(uid,date): {e}')
 
+
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
 def check_sites(stat):
 	# Отформатированный список без camp id и даты
 	camp_id = list(stat.keys())[0]
 	f_stat = stat[camp_id]
 	f_stat = f_stat[list(f_stat.keys())[0]]
-	#log.debug(f_stat)
+	# log.debug(f_stat)
 	if len(f_stat) > 0:
 		with open('uids.data', 'rb') as f:
 			blackuids = pickle.load(f)
+		log.debug(f'checksites bluids- {blackuids}')
 		for key, value in f_stat.items():
 			# Если есть вложеные площадки - проходим по ним
 			if key not in blackuids:
@@ -236,6 +243,7 @@ def check_sites(stat):
 						log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
 						disable_sites(f"{key}", camp_id)
 		del blackuids
+
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
 def check_teasers(tsrs, profit, camp_id):
@@ -278,7 +286,7 @@ def check_teasers(tsrs, profit, camp_id):
 							conv = value1['conversion']['buying_all'] - value['conversion']['buying_all']
 							spent = value1['statistics']['spent'] - value['statistics']['spent']
 							roi = (conv * profit - spent) / spent * 100
-							#log.debug()
+							# log.debug()
 							if conv > highest_conv and roi > highest_roi:
 								highest_conv = conv
 								highest_roi = roi
@@ -309,13 +317,14 @@ def check_teasers(tsrs, profit, camp_id):
 		if value['statistics']['hits'] > 10000 and \
 			value['statistics']['clicks'] > 100 and float(value['statistics']['ctr']) < 0.2:
 			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
-			#disable_teaser(key)
+			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CTR TASK 1): {key}')
 		# CLICKS TASK 1
 		if value['statistics']['clicks'] > 100 and value['conversion']['buying_all'] == 0:
 			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
+
 
 # Отключение тизера
 def disable_teaser(tsr_id):
@@ -324,15 +333,17 @@ def disable_teaser(tsr_id):
 			?token={auth()['token']}&whetherToBlockByClient=1")
 		if response.status_code == requests.codes.ok:
 			response = response.json()
-			if response['id'] == tsr_id:
-				log.info(f'Teaser {tsr_id} disabled')
-			else:
-				log.warning(f'action_teaser: {response}')
+			if 'id' in response:
+				if str(response['id']) == str(tsr_id):
+					log.info(f'Teaser {tsr_id} disabled')
+				else:
+					log.warning(f'action_teaser: {response}')
 		else:
 			log.error(f'action_teaser: {response.status_code}')
 
 	except Exception as e:
 		log.critical(f'action_teaser: {e}')
+
 
 # Изменение цены за клик для тизера
 def change_cpc(tsr_id, value, rate=0.5):
@@ -341,8 +352,9 @@ def change_cpc(tsr_id, value, rate=0.5):
 		/teasers/{tsr_id}?token={auth()['token']}&priceOfClickByLocation={value + rate}")
 		if response.status_code == requests.codes.ok:
 			response = response.json()
-			if response['id'] == tsr_id:
-				log.info(f'Changed teaser {tsr_id} cpc {value} to {value + rate}')
+			if 'id' in response:
+				if str(response['id']) == str(tsr_id):
+					log.info(f'Changed teaser {tsr_id} cpc {value} to {value + rate}')
 			else:
 				log.warning(f'change_cpc response: {response}')
 		else:
@@ -350,32 +362,34 @@ def change_cpc(tsr_id, value, rate=0.5):
 	except Exception as e:
 		log.critical(f'change_cpc: {e}')
 
+
 if __name__ == '__main__':
 	config = configparser.ConfigParser()
 	if os.path.isfile('config.ini'):
 		config.read('config.ini')
+		EMAIL = config['MGID']['email']
+		PASSWORD = config['MGID']['password']
 	else:
 		log.critical('Config file (config.ini) not found')
-	EMAIL = config['MGID']['email']
-	PASSWORD = config['MGID']['password']
 	log.info('Started')
 	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
 	if not os.path.isfile('uids.data'):
 		alreadylisted = []
 		with open('uids.data', 'wb') as f_in:
 			pickle.dump(alreadylisted, f_in)
+		del alreadylisted
 	try:
 		while True:
 			for camp in camplist:
 				log.debug(f'for in {camp}')
 				check_sites(site_stats(camp))
 	except Exception as err:
-		log.critical(f'Main proccess error: {err}')
+		log.critical(f'Main process error: {err}')
 	finally:
 		log.info('Finished')
-	#log.debug(site_stats(584125))
-	#log.debug(f'{user_teasers(582530)}')
-	#check_teasers(user_teasers(582530), 6, 582530)
+	# log.debug(site_stats(584125))
+	# log.debug(f'{user_teasers(582530)}')
+	# check_teasers(user_teasers(582530), 6, 582530)
 
 
 # TODO Функция проверки хороших площадок

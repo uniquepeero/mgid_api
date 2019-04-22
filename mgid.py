@@ -120,10 +120,25 @@ def disable_sites(uid, camp_id):
 			/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
 		if response.status_code == requests.codes.ok:
 			response = response.json()
-			if response['id'] == camp_id:
-				log.info(f'Site {uid} disabled in campaign {camp_id}')
+			if 'id' in response:
+				if response['id'] == camp_id:
+					log.info(f'Site {uid} disabled in campaign {camp_id}')
+				else:
+					log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+			elif 'errors' in response:
+				err = response['errors'][0]
+				if err == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
+					response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+							/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
+					if response.status_code == requests.codes.ok:
+						response = response.json()
+						if 'id' in response:
+							if response['id'] == camp_id:
+								log.info(f'Site {uid} disabled in campaign {camp_id}')
+							else:
+								log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
 			else:
-				log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+				log.error(f'disable sites: no id or errors in resp - {response}')
 		else:
 			log.error(f'disable_sites: {response.status_code}')
 	except Exception as e:
@@ -324,16 +339,16 @@ if __name__ == '__main__':
 	PASSWORD = config['MGID']['password']
 	log.info('Started')
 	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
-	try:
-		while True:
-			for camp in camplist:
-				log.debug(f'for in {camp}')
-				check_sites(site_stats(camp))
-	except Exception as e:
-		log.critical(f'Main proccess error: {e}')
-	finally:
-		log.info('Finished')
-	log.debug(site_stats(584125))
+	#try:
+	while True:
+		for camp in camplist:
+			log.debug(f'for in {camp}')
+			check_sites(site_stats(camp))
+	#except Exception as e:
+	#	log.critical(f'Main proccess error: {e}')
+	#finally:
+		#log.info('Finished')
+	#log.debug(site_stats(584125))
 	#log.debug(f'{user_teasers(582530)}')
 	#check_teasers(user_teasers(582530), 6, 582530)
 

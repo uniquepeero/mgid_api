@@ -218,19 +218,24 @@ def check_sites(stat):
 	f_stat = f_stat[list(f_stat.keys())[0]]
 	#log.debug(f_stat)
 	if len(f_stat) > 0:
+		with open('uids.data', 'rb') as f:
+			blackuids = pickle.load(f)
 		for key, value in f_stat.items():
 			# Если есть вложеные площадки - проходим по ним
-			if len(value['sources']) > 0:
-				sources = value['sources']
-				for key1, value1 in sources.items():
-					if 'spent' in value1:
-						if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-							log.info(f'{camp_id} Site {key}s{key1} (spent {value1["spent"]} and leads not found) is ready to disable')
-							disable_sites(f"{key}s{key1}", camp_id)
-			if 'spent' in value:
-				if value['spent'] > 10 and ('buy' and 'decision' not in value):
-					log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
-					disable_sites(f"{key}", camp_id)
+			if key not in blackuids:
+				if len(value['sources']) > 0:
+					sources = value['sources']
+					for key1, value1 in sources.items():
+						if key1 not in blackuids:
+							if 'spent' in value1:
+								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+									log.info(f'{camp_id} Site {key}s{key1} (spent {value1["spent"]} and leads not found) is ready to disable')
+									disable_sites(f"{key}s{key1}", camp_id)
+				if 'spent' in value:
+					if value['spent'] > 10 and ('buy' and 'decision' not in value):
+						log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
+						disable_sites(f"{key}", camp_id)
+		del blackuids
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
 def check_teasers(tsrs, profit, camp_id):

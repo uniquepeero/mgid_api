@@ -9,7 +9,7 @@ import configparser
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)  # w - перезаписывает файл.
+log.setLevel(logging.INFO)  # w - перезаписывает файл.
 fh = logging.FileHandler("logs.log", encoding="utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -126,8 +126,8 @@ def disable_sites(uid, camp_id):
 				else:
 					log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
 			elif 'errors' in response:
-				err = response['errors'][0]
-				if err == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
+				error = response['errors'][0]
+				if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
 					response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
 							/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
 					if response.status_code == requests.codes.ok:
@@ -339,15 +339,15 @@ if __name__ == '__main__':
 	PASSWORD = config['MGID']['password']
 	log.info('Started')
 	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
-	#try:
-	while True:
-		for camp in camplist:
-			log.debug(f'for in {camp}')
-			check_sites(site_stats(camp))
-	#except Exception as e:
-	#	log.critical(f'Main proccess error: {e}')
-	#finally:
-		#log.info('Finished')
+	try:
+		while True:
+			for camp in camplist:
+				log.debug(f'for in {camp}')
+				check_sites(site_stats(camp))
+	except Exception as err:
+		log.critical(f'Main proccess error: {err}')
+	finally:
+		log.info('Finished')
 	#log.debug(site_stats(584125))
 	#log.debug(f'{user_teasers(582530)}')
 	#check_teasers(user_teasers(582530), 6, 582530)

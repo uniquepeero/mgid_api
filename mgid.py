@@ -115,34 +115,40 @@ def user_teasers(campaign=None, teaser_id=None):
 
 #Exclude site from campaign and print result
 def disable_sites(uid, camp_id):
-	try:
-		response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-			/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
-		if response.status_code == requests.codes.ok:
-			response = response.json()
-			if 'id' in response:
-				if response['id'] == camp_id:
-					log.info(f'Site {uid} disabled in campaign {camp_id}')
+	camp_id = str(camp_id)
+	if uid not in alreadylisted:
+		try:
+			response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+				/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
+			if response.status_code == requests.codes.ok:
+				response = response.json()
+				if 'id' in response:
+					if str(response['id']) == camp_id:
+						log.info(f'Site {uid} disabled in campaign {camp_id}')
+						alreadylisted.append(uid)
+					else:
+						log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+						log.debug(f'camp id {camp_id} id {response["id"]}')
+				elif 'errors' in response:
+					error = response['errors'][0]
+					if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
+						response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+								/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
+						if response.status_code == requests.codes.ok:
+							response = response.json()
+							if 'id' in response:
+								if str(response['id']) == camp_id:
+									log.info(f'Site {uid} disabled in campaign {camp_id}')
+									alreadylisted.append(uid)
+								else:
+									log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+									log.debug(f'camp id {camp_id} id {response["id"]}')
 				else:
-					log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
-			elif 'errors' in response:
-				error = response['errors'][0]
-				if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
-					response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-							/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
-					if response.status_code == requests.codes.ok:
-						response = response.json()
-						if 'id' in response:
-							if response['id'] == camp_id:
-								log.info(f'Site {uid} disabled in campaign {camp_id}')
-							else:
-								log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+					log.error(f'disable sites: no id or errors in resp - {response}')
 			else:
-				log.error(f'disable sites: no id or errors in resp - {response}')
-		else:
-			log.error(f'disable_sites: {response.status_code}')
-	except Exception as e:
-		log.critical(f'disable_sites: {e}')
+				log.error(f'disable_sites: {response.status_code}')
+		except Exception as e:
+			log.critical(f'disable_sites: {e}')
 
 #Get campaigns statistics by sites include conversions. Returns in dict
 def site_stats(camp_id, uid=None, dateinterval=None):
@@ -339,6 +345,7 @@ if __name__ == '__main__':
 	PASSWORD = config['MGID']['password']
 	log.info('Started')
 	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
+	alreadylisted = []
 	try:
 		while True:
 			for camp in camplist:

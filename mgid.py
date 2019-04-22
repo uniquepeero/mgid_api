@@ -9,7 +9,7 @@ import configparser
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)  # w - перезаписывает файл.
+log.setLevel(logging.DEBUG)  # w - перезаписывает файл.
 fh = logging.FileHandler("logs.log", encoding="utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -186,19 +186,20 @@ def check_sites(stat):
 	f_stat = stat[camp_id]
 	f_stat = f_stat[list(f_stat.keys())[0]]
 	#log.debug(f_stat)
-	for key, value in f_stat.items():
-		# Если есть вложеные площадки - проходим по ним
-		if len(value['sources']) > 0:
-			sources = value['sources']
-			for key1, value1 in sources.items():
-				if 'spent' in value1:
-					if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-						log.info(f'{camp_id} Site {key}s{key1} (spent {value1["spent"]} and leads not found) is ready to disable')
-						disable_sites(f"{key}s{key1}", camp_id)
-		if 'spent' in value:
-			if value['spent'] > 10 and ('buy' and 'decision' not in value):
-				log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
-				disable_sites(f"{key}", camp_id)
+	if len(f_stat) > 0:
+		for key, value in f_stat.items():
+			# Если есть вложеные площадки - проходим по ним
+			if len(value['sources']) > 0:
+				sources = value['sources']
+				for key1, value1 in sources.items():
+					if 'spent' in value1:
+						if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+							log.info(f'{camp_id} Site {key}s{key1} (spent {value1["spent"]} and leads not found) is ready to disable')
+							disable_sites(f"{key}s{key1}", camp_id)
+			if 'spent' in value:
+				if value['spent'] > 10 and ('buy' and 'decision' not in value):
+					log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
+					disable_sites(f"{key}", camp_id)
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
 def check_teasers(tsrs, profit, camp_id):
@@ -326,12 +327,13 @@ if __name__ == '__main__':
 	try:
 		while True:
 			for camp in camplist:
+				log.debug(f'for in {camp}')
 				check_sites(site_stats(camp))
 	except Exception as e:
 		log.critical(f'Main proccess error: {e}')
 	finally:
 		log.info('Finished')
-	#log.debug(site_stats(582530))
+	log.debug(site_stats(584125))
 	#log.debug(f'{user_teasers(582530)}')
 	#check_teasers(user_teasers(582530), 6, 582530)
 

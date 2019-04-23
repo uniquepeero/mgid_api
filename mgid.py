@@ -9,7 +9,7 @@ import configparser
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)  # w - перезаписывает файл.
+log.setLevel(logging.INFO)  # w - перезаписывает файл.
 fh = logging.FileHandler("logs.log", encoding="utf-8")
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -117,54 +117,6 @@ def user_teasers(campaign=None, teaser_id=None):
 				log.critical(f'user_teasers(None): {e}')
 
 
-# Exclude site from campaign and print result
-def disable_sites(uid, camp_id):
-	camp_id = str(camp_id)
-	with open('uids.data', 'rb') as f_out:
-		blackuids = pickle.load(f_out)
-	if uid not in blackuids:
-		try:
-			response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-				/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
-			if response.status_code == requests.codes.ok:
-				response = response.json()
-				if 'id' in response:
-					if str(response['id']) == camp_id:
-						blackuids.append(uid)
-						with open('uids.data', 'wb') as f:
-							pickle.dump(blackuids, f)
-						del blackuids
-						log.info(f'Site {uid} disabled and added to file in campaign {camp_id}')
-					else:
-						log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
-						log.debug(f'camp id {camp_id} id {response["id"]}')
-				elif 'errors' in response:
-					error = response['errors'][0]
-					if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
-						response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-								/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
-						if response.status_code == requests.codes.ok:
-							response = response.json()
-							if 'id' in response:
-								if str(response['id']) == camp_id:
-									blackuids.append(uid)
-									with open('uids.data', 'wb') as f:
-										pickle.dump(blackuids, f)
-									del blackuids
-									log.info(f'Site {uid} disabled and added to file in campaign {camp_id}')
-								else:
-									log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
-									log.debug(f'camp id {camp_id} id {response["id"]}')
-				else:
-					log.error(f'disable sites: no id or errors in resp - {response}')
-			else:
-				log.error(f'disable_sites: {response.status_code}')
-		except Exception as e:
-			log.critical(f'disable_sites: {e}')
-	else:
-		del blackuids
-
-
 # Get campaigns statistics by sites include conversions. Returns in dict
 def site_stats(camp_id, uid=None, dateinterval=None):
 	headers = {
@@ -217,7 +169,7 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 
 
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
-def check_sites(stat):
+def check_sites(stat, priceconv=None):
 	# Отформатированный список без camp id и даты
 	camp_id = list(stat.keys())[0]
 	f_stat = stat[camp_id]
@@ -236,12 +188,83 @@ def check_sites(stat):
 						if key1 not in blackuids:
 							if 'spent' in value1:
 								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-									log.info(f'{camp_id} Site {key}s{key1} (spent {value1["spent"]} and leads not found) is ready to disable')
+									log.info(f'{camp_id} > {key}s{key1}\n\
+									(spent {value1["spent"]} and leads not found) is ready to disable')
 									disable_sites(f"{key}s{key1}", camp_id)
+								elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+									if 'buy' not in value1:
+										log.info(f'{camp_id} > {key}s{key1}\n\
+										(spent {value1["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+										disable_sites(f'{key}s{key1}', camp_id)
+									elif 'buy' in value1:
+										if (value1['buy'] * priceconv - value1['spent']) < 0:
+											log.info(f'{camp_id} > {key}s{key1}\n\
+											(spent {value1["spent"]} > {priceconv} * 3 and profit is \
+{value1["buy"] * priceconv - value1["spent"]}) is ready to disable')
+											disable_sites(f'{key}s{key1}', camp_id)
 				if 'spent' in value:
 					if value['spent'] > 10 and ('buy' and 'decision' not in value):
-						log.info(f'{camp_id} Site {key} (spent {value["spent"]} and leads not found) is ready to disable')
+						log.info(f'{camp_id} > {key} (spent {value["spent"]} and leads not found) is ready to disable')
 						disable_sites(f"{key}", camp_id)
+					elif (priceconv is not None) and (value['spent'] > priceconv * 3):
+						if 'buy' not in value:
+							log.info(f'{camp_id} > {key}\n\
+							(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+							disable_sites(f'{key}', camp_id)
+						elif 'buy' in value:
+							if (value['buy'] * priceconv - value['spent']) < 0:
+								log.info(f'{camp_id} > {key}\n\
+								(spent {value["spent"]} > {priceconv} * 3 and profit is \
+{value["buy"] * priceconv - value["spent"]}) is ready to disable')
+								disable_sites(f'{key}', camp_id)
+		del blackuids
+
+
+# Exclude site from campaign and print result
+def disable_sites(uid, camp_id):
+	camp_id = str(camp_id)
+	with open('uids.data', 'rb') as f_out:
+		blackuids = pickle.load(f_out)
+	if uid not in blackuids:
+		try:
+			response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+				/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
+			if response.status_code == requests.codes.ok:
+				response = response.json()
+				if 'id' in response:
+					if str(response['id']) == camp_id:
+						blackuids.append(uid)
+						with open('uids.data', 'wb') as f:
+							pickle.dump(blackuids, f)
+						log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\n{blackuids}')
+						del blackuids
+					else:
+						log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+						log.debug(f'camp id {camp_id} id {response["id"]}')
+				elif 'errors' in response:
+					error = response['errors'][0]
+					if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
+						response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
+								/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
+						if response.status_code == requests.codes.ok:
+							response = response.json()
+							if 'id' in response:
+								if str(response['id']) == camp_id:
+									blackuids.append(uid)
+									with open('uids.data', 'wb') as f:
+										pickle.dump(blackuids, f)
+									log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\n{blackuids}')
+									del blackuids
+								else:
+									log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
+									log.debug(f'camp id {camp_id} id {response["id"]}')
+				else:
+					log.error(f'disable sites: no id or errors in resp - {response}')
+			else:
+				log.error(f'disable_sites: {response.status_code}')
+		except Exception as e:
+			log.critical(f'disable_sites: {e}')
+	else:
 		del blackuids
 
 
@@ -372,7 +395,7 @@ if __name__ == '__main__':
 	else:
 		log.critical('Config file (config.ini) not found')
 	log.info('Started')
-	camplist = [582530, 585341, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
+	camplist = [582530, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
 	if not os.path.isfile('uids.data'):
 		alreadylisted = []
 		with open('uids.data', 'wb') as f_in:
@@ -381,8 +404,10 @@ if __name__ == '__main__':
 	try:
 		while True:
 			for camp in camplist:
-				log.debug(f'for in {camp}')
-				check_sites(site_stats(camp))
+				if camp == 582530:
+					check_sites(site_stats(camp), 6)
+				else:
+					check_sites(site_stats(camp))
 	except Exception as err:
 		log.critical(f'Main process error: {err}')
 	finally:

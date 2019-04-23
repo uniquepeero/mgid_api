@@ -188,34 +188,35 @@ def check_sites(stat, priceconv=None):
 						if key1 not in blackuids:
 							if 'spent' in value1:
 								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-									log.info(f'{camp_id} > {key}s{key1}\n\
-									(spent {value1["spent"]} and leads not found) is ready to disable')
+									log.info(f'{camp_id} > {key}s{key1}\n'
+										f'(spent {value1["spent"]} and leads not found) is ready to disable')
 									disable_sites(f"{key}s{key1}", camp_id)
 								elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
 									if 'buy' not in value1:
-										log.info(f'{camp_id} > {key}s{key1}\n\
-										(spent {value1["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+										log.info(f'{camp_id} > {key}s{key1}\n'
+											f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
 										disable_sites(f'{key}s{key1}', camp_id)
 									elif 'buy' in value1:
 										if (value1['buy'] * priceconv - value1['spent']) < 0:
-											log.info(f'{camp_id} > {key}s{key1}\n\
-											(spent {value1["spent"]} > {priceconv} * 3 and profit is \
-{value1["buy"] * priceconv - value1["spent"]}) is ready to disable')
+											log.info(f'{camp_id} > {key}s{key1}\n'
+												f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+												f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
 											disable_sites(f'{key}s{key1}', camp_id)
 				if 'spent' in value:
 					if value['spent'] > 10 and ('buy' and 'decision' not in value):
-						log.info(f'{camp_id} > {key} (spent {value["spent"]} and leads not found) is ready to disable')
+						log.info(f'{camp_id} > {key}\n'
+							f'(spent {value["spent"]} and leads not found) is ready to disable')
 						disable_sites(f"{key}", camp_id)
 					elif (priceconv is not None) and (value['spent'] > priceconv * 3):
 						if 'buy' not in value:
-							log.info(f'{camp_id} > {key}\n\
-							(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+							log.info(f'{camp_id} > {key}\n'
+								f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
 							disable_sites(f'{key}', camp_id)
 						elif 'buy' in value:
 							if (value['buy'] * priceconv - value['spent']) < 0:
-								log.info(f'{camp_id} > {key}\n\
-								(spent {value["spent"]} > {priceconv} * 3 and profit is \
-{value["buy"] * priceconv - value["spent"]}) is ready to disable')
+								log.info(f'{camp_id} > {key}\n'
+									f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
+									f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
 								disable_sites(f'{key}', camp_id)
 		del blackuids
 
@@ -236,7 +237,7 @@ def disable_sites(uid, camp_id):
 						blackuids.append(uid)
 						with open('uids.data', 'wb') as f:
 							pickle.dump(blackuids, f)
-						log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\n{blackuids}')
+						log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\nLISTED UIDS: {blackuids}')
 						del blackuids
 					else:
 						log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
@@ -253,7 +254,7 @@ def disable_sites(uid, camp_id):
 									blackuids.append(uid)
 									with open('uids.data', 'wb') as f:
 										pickle.dump(blackuids, f)
-									log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\n{blackuids}')
+									log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\nLISTED UIDS: {blackuids}')
 									del blackuids
 								else:
 									log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")

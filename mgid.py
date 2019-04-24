@@ -261,7 +261,9 @@ def check_sites(stat, priceconv=None):
 									log.info(f'{camp_id} > {key}\n'
 										f'(spent {value["spent"]} > {priceconv} * 3 and profit ({value["buy"]} BUY) is '
 										f'{(value["buy"] * priceconv - value["spent"]):.5}) '
-										f'profit ({value["decision"]} DECISION) is {(value["decision"] * priceconv - value["spent"]):.5} is ready to disable')
+									         f'profit ({value["decision"]} DECISION) is '
+									         f'{(value["decision"] * priceconv - value[
+										         "spent"]):.5} is ready to disable')
 									disable_sites(f'{key}', camp_id)
 							elif (value['buy'] * priceconv - value['spent']) < 0:
 								log.info(f'{camp_id} > {key}\n'

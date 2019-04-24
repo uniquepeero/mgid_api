@@ -64,6 +64,12 @@ def user_campaigns(camp_id=None):
 		except Exception as e:
 			log.critical(f'user_campaigns(): {e}')
 
+def get_active_camps(camps):
+	active_dict = {}
+	for key, value in camps.items():
+		if value['status']['name'] == 'active':
+			active_dict[key] = value['widgetsFilterUid']
+	return active_dict
 
 # Get specific ACTIVE teaser info if teaser_id is provided or return all user teasers. Returns in dict
 def user_teasers(campaign=None, teaser_id=None):
@@ -174,34 +180,70 @@ def check_sites(stat, priceconv=None):
 	camp_id = list(stat.keys())[0]
 	f_stat = stat[camp_id]
 	f_stat = f_stat[list(f_stat.keys())[0]]
-	# log.debug(f_stat)
 	if len(f_stat) > 0:
-		with open('uids.data', 'rb') as f:
-			blackuids = pickle.load(f)
-		log.debug(f'checksites bluids- {blackuids}')
+		log.debug(f'Зашли в camp id {camp_id}')
 		for key, value in f_stat.items():
 			# Если есть вложеные площадки - проходим по ним
-			if key not in blackuids:
+			if (key not in active[camp_id]['widgets']) or \
+				(key in active[camp_id]['widgets'] and len(active[camp_id]['widgets'][key]) > 4):
+				log.debug(f'Key {key} not in {active[camp_id]["widgets"]}')
 				if len(value['sources']) > 0:
 					sources = value['sources']
+					log.debug(f'Sources: {sources}')
 					for key1, value1 in sources.items():
-						if key1 not in blackuids:
-							if 'spent' in value1:
-								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-									log.info(f'{camp_id} > {key}s{key1}\n'
-										f'(spent {value1["spent"]} and leads not found) is ready to disable')
-									disable_sites(f"{key}s{key1}", camp_id)
-								elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
-									if 'buy' not in value1:
+						if key in active[camp_id]['widgets']:
+							if int(key1) not in list(active[camp_id]["widgets"][key]):
+								if 'spent' in value1:
+									if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
 										log.info(f'{camp_id} > {key}s{key1}\n'
-											f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
-										disable_sites(f'{key}s{key1}', camp_id)
-									elif 'buy' in value1:
-										if (value1['buy'] * priceconv - value1['spent']) < 0:
+											f'(spent {value1["spent"]} and leads not found) is ready to disable')
+										disable_sites(f"{key}s{key1}", camp_id)
+									elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+										if 'buy' not in value1:
 											log.info(f'{camp_id} > {key}s{key1}\n'
-												f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-												f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+												f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
 											disable_sites(f'{key}s{key1}', camp_id)
+										elif 'buy' in value1:
+											if 'decision' in value1:
+												if ((value1['buy'] * priceconv - value1['spent']) < 0) and \
+														((value1['decision'] * priceconv - value1['spent']) < -10):
+													log.info(f'{camp_id} > {key}\n'
+														f'(spent {value1["spent"]} > {priceconv} * 3 and profit ({value1["buy"]} BUY) is '
+														f'{(value1["buy"] * priceconv - value1["spent"]):.5} '
+														f'profit ({value1["decision"]} DECISION)' 
+														f' is {(value1["decision"] * priceconv - value1["spent"]):.5}) is ready to disable')
+													disable_sites(f'{key}s{key1}', camp_id)
+											elif (value1['buy'] * priceconv - value1['spent']) < 0:
+												log.info(f'{camp_id} > {key}s{key1}\n'
+													f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+													f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+												disable_sites(f'{key}s{key1}', camp_id)
+						elif 'spent' in value1:
+							if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+								log.info(f'{camp_id} > {key}s{key1}\n'
+									f'(spent {value1["spent"]} and leads not found) is ready to disable')
+								disable_sites(f"{key}s{key1}", camp_id)
+							elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+								if 'buy' not in value1:
+									log.info(f'{camp_id} > {key}s{key1}\n'
+										f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
+									disable_sites(f'{key}s{key1}', camp_id)
+								elif 'buy' in value1:
+									if 'decision' in value1:
+										if ((value1['buy'] * priceconv - value1['spent']) < 0) and \
+											((value1['decision'] * priceconv - value1['spent']) < -10):
+											log.info(f'{camp_id} > {key}\n'
+												f'(spent {value1["spent"]} > {priceconv} * 3 and profit ({value1["buy"]} BUY) is '
+												f'{(value1["buy"] * priceconv - value1["spent"]):.5} '
+												f'profit ({value1["decision"]} DECISION) '
+												f'is {(value1["decision"] * priceconv - value1["spent"]):.5}) is ready to disable')
+											disable_sites(f'{key}s{key1}', camp_id)
+									elif (value1['buy'] * priceconv - value1['spent']) < 0:
+										log.info(f'{camp_id} > {key}s{key1}\n'
+											f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+											f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+										disable_sites(f'{key}s{key1}', camp_id)
+
 				if 'spent' in value:
 					if value['spent'] > 10 and ('buy' and 'decision' not in value):
 						log.info(f'{camp_id} > {key}\n'
@@ -213,60 +255,73 @@ def check_sites(stat, priceconv=None):
 								f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
 							disable_sites(f'{key}', camp_id)
 						elif 'buy' in value:
-							if (value['buy'] * priceconv - value['spent']) < 0:
+							if 'decision' in value:
+								if ((value['buy'] * priceconv - value['spent']) < 0) and \
+									((value['decision'] * priceconv - value['spent']) < -10):
+									log.info(f'{camp_id} > {key}\n'
+										f'(spent {value["spent"]} > {priceconv} * 3 and profit ({value["buy"]} BUY) is '
+										f'{(value["buy"] * priceconv - value["spent"]):.5}) '
+										f'profit ({value["decision"]} DECISION) is {(value["decision"] * priceconv - value["spent"]):.5} is ready to disable')
+									disable_sites(f'{key}', camp_id)
+							elif (value['buy'] * priceconv - value['spent']) < 0:
 								log.info(f'{camp_id} > {key}\n'
 									f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
 									f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
 								disable_sites(f'{key}', camp_id)
-		del blackuids
 
 
 # Exclude site from campaign and print result
 def disable_sites(uid, camp_id):
 	camp_id = str(camp_id)
-	with open('uids.data', 'rb') as f_out:
-		blackuids = pickle.load(f_out)
-	if uid not in blackuids:
+	offreq = ''
+	if active[camp_id]['filterType'] == 'except' or active[camp_id]['filterType'] == 'off':
+		offreq = 'include,except,'
+	elif active[camp_id]['filterType'] == 'only':
+		offreq = 'exclude,only,'
+	else:
+		log.error(f'Not found correct filtertype: {active[camp_id]["filterType"]}')
+	if len(offreq):
 		try:
 			response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-				/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,only,{uid}")
+				/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid={offreq}{uid}")
 			if response.status_code == requests.codes.ok:
+				log.debug('REQUEST IS GOOD')
 				response = response.json()
+				log.debug(f'RESPONSE IS: {response}')
 				if 'id' in response:
 					if str(response['id']) == camp_id:
-						blackuids.append(uid)
-						with open('uids.data', 'wb') as f:
-							pickle.dump(blackuids, f)
-						log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\nLISTED UIDS: {blackuids}')
-						del blackuids
+						checkoff = user_campaigns(camp_id)
+						if offreq == 'include,except,':
+							if 's' in uid:
+								s = uid.find('s')
+								uidmain = uid[:s]
+								uidsub = uid[s + 1:]
+								if (uidmain in checkoff['widgetsFilterUid']['widgets']) and \
+									(uidsub in checkoff['widgetsFilterUid']['widgets'][uidmain]):
+									log.info(f'Site {uid} disabled (included in BL) in campaign {camp_id}')
+							else:
+								if uid in checkoff['widgetsFilterUid']['widgets']:
+									log.info(f'Site {uid} disabled (included in BL) in campaign {camp_id}')
+						elif offreq == 'exclude,only,':
+							if 's' in uid:
+								s = uid.find('s')
+								uidmain = uid[:s]
+								uidsub = uid[s + 1:]
+								if (uidmain not in checkoff['widgetsFilterUid']['widgets']) and \
+									(uidsub not in checkoff['widgetsFilterUid']['widgets'][uidmain]):
+									log.info(f'Site {uid} disabled (excluded from WL) in campaign {camp_id}')
+							else:
+								if uid not in checkoff['widgetsFilterUid']['widgets']:
+									log.info(f'Site {uid} disabled (excluded from WL) in campaign {camp_id}')
 					else:
 						log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
 						log.debug(f'camp id {camp_id} id {response["id"]}')
-				elif 'errors' in response:
-					error = response['errors'][0]
-					if error == '[ERROR_CURRENT_FILTER_TYPE_DIFFERENT_FIRST_SEND_OFF_FOR_FILTER_THAN_SEND_NEW_FILTER_TYPE]':
-						response = requests.patch(f"{APIURL}/goodhits/clients/{auth()['idAuth']} \
-								/campaigns/{camp_id}?token={auth()['token']}&widgetsFilterUid=exclude,except,{uid}")
-						if response.status_code == requests.codes.ok:
-							response = response.json()
-							if 'id' in response:
-								if str(response['id']) == camp_id:
-									blackuids.append(uid)
-									with open('uids.data', 'wb') as f:
-										pickle.dump(blackuids, f)
-									log.info(f'Site {uid} disabled and added to file in campaign {camp_id}\nLISTED UIDS: {blackuids}')
-									del blackuids
-								else:
-									log.warning(f"Site {uid} in {camp_id} isn't disabled: {response}")
-									log.debug(f'camp id {camp_id} id {response["id"]}')
 				else:
-					log.error(f'disable sites: no id or errors in resp - {response}')
+					log.error(f'disable sites: no id in resp - {response}')
 			else:
 				log.error(f'disable_sites: {response.status_code}')
 		except Exception as e:
 			log.critical(f'disable_sites: {e}')
-	else:
-		del blackuids
 
 
 # Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
@@ -396,27 +451,18 @@ if __name__ == '__main__':
 	else:
 		log.critical('Config file (config.ini) not found')
 	log.info('Started')
-	camplist = [582530, 584125, 584873, 584949, 584983, 585301, 585331, 585373, 587915, 587943]
-	if not os.path.isfile('uids.data'):
-		alreadylisted = []
-		with open('uids.data', 'wb') as f_in:
-			pickle.dump(alreadylisted, f_in)
-		del alreadylisted
-	try:
-		while True:
-			for camp in camplist:
-				if camp == 582530:
+	log.debug(f'ACTIVE CAMPS: {get_active_camps(user_campaigns())}')
+	while True:
+		active = get_active_camps(user_campaigns())
+		if len(active):
+			for camp, values in active.items():
+				if camp == '582530':
 					check_sites(site_stats(camp), 6)
 				else:
 					check_sites(site_stats(camp))
-	except Exception as err:
-		log.critical(f'Main process error: {err}')
-	finally:
-		log.info('Finished')
 	# log.debug(site_stats(584125))
 	# log.debug(f'{user_teasers(582530)}')
 	# check_teasers(user_teasers(582530), 6, 582530)
-
 
 # TODO Функция проверки хороших площадок
 # TODO Функция увеличения коэф. хороших площадок

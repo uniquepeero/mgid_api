@@ -459,6 +459,8 @@ if __name__ == '__main__':
 			for camp, values in active.items():
 				if camp == '582530':
 					check_sites(site_stats(camp), 6)
+				elif camp == '585301':
+					check_sites(site_stats(camp), 11.5)
 				else:
 					check_sites(site_stats(camp))
 	# log.debug(site_stats(584125))

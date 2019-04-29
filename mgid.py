@@ -203,21 +203,11 @@ def check_sites(stat, priceconv=None):
 											log.info(f'{camp_id} > {key}s{key1}\n'
 												f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
 											disable_sites(f'{key}s{key1}', camp_id)
-										elif 'buy' in value1:
-											if 'decision' in value1:
-												if ((value1['buy'] * priceconv - value1['spent']) < 0) and \
-														((value1['decision'] * priceconv - value1['spent']) < -10):
-													log.info(f'{camp_id} > {key}\n'
-														f'(spent {value1["spent"]} > {priceconv} * 3 and profit ({value1["buy"]} BUY) is '
-														f'{(value1["buy"] * priceconv - value1["spent"]):.5} '
-														f'profit ({value1["decision"]} DECISION)' 
-														f' is {(value1["decision"] * priceconv - value1["spent"]):.5}) is ready to disable')
-													disable_sites(f'{key}s{key1}', camp_id)
-											elif (value1['buy'] * priceconv - value1['spent']) < 0:
-												log.info(f'{camp_id} > {key}s{key1}\n'
-													f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-													f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-												disable_sites(f'{key}s{key1}', camp_id)
+										elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
+											log.info(f'{camp_id} > {key}s{key1}\n'
+												f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+												f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+											disable_sites(f'{key}s{key1}', camp_id)
 						elif 'spent' in value1:
 							if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
 								log.info(f'{camp_id} > {key}s{key1}\n'
@@ -228,21 +218,11 @@ def check_sites(stat, priceconv=None):
 									log.info(f'{camp_id} > {key}s{key1}\n'
 										f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
 									disable_sites(f'{key}s{key1}', camp_id)
-								elif 'buy' in value1:
-									if 'decision' in value1:
-										if ((value1['buy'] * priceconv - value1['spent']) < 0) and \
-											((value1['decision'] * priceconv - value1['spent']) < -10):
-											log.info(f'{camp_id} > {key}\n'
-												f'(spent {value1["spent"]} > {priceconv} * 3 and profit ({value1["buy"]} BUY) is '
-												f'{(value1["buy"] * priceconv - value1["spent"]):.5} '
-												f'profit ({value1["decision"]} DECISION) '
-												f'is {(value1["decision"] * priceconv - value1["spent"]):.5}) is ready to disable')
-											disable_sites(f'{key}s{key1}', camp_id)
-									elif (value1['buy'] * priceconv - value1['spent']) < 0:
-										log.info(f'{camp_id} > {key}s{key1}\n'
-											f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-											f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-										disable_sites(f'{key}s{key1}', camp_id)
+								elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
+									log.info(f'{camp_id} > {key}s{key1}\n'
+										f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+										f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+									disable_sites(f'{key}s{key1}', camp_id)
 
 				if 'spent' in value:
 					if value['spent'] > 10 and ('buy' and 'decision' not in value):
@@ -254,21 +234,11 @@ def check_sites(stat, priceconv=None):
 							log.info(f'{camp_id} > {key}\n'
 								f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
 							disable_sites(f'{key}', camp_id)
-						elif 'buy' in value:
-							if 'decision' in value:
-								if ((value['buy'] * priceconv - value['spent']) < 0) and \
-									((value['decision'] * priceconv - value['spent']) < -10):
-									log.info(f'{camp_id} > {key}\n'
-										f'(spent {value["spent"]} > {priceconv} * 3 and profit ({value["buy"]} BUY) is '
-										f'{(value["buy"] * priceconv - value["spent"]):.5}) '
-										f'profit ({value["decision"]} DECISION) is '
-										f'{(value["decision"] * priceconv - value["spent"]):.5} is ready to disable')
-									disable_sites(f'{key}', camp_id)
-							elif (value['buy'] * priceconv - value['spent']) < 0:
-								log.info(f'{camp_id} > {key}\n'
-									f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
-									f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
-								disable_sites(f'{key}', camp_id)
+						elif 'buy' in value and ((value['buy'] * priceconv - value['spent']) < priceconv):
+							log.info(f'{camp_id} > {key}\n'
+								f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
+								f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
+							disable_sites(f'{key}', camp_id)
 
 
 # Exclude site from campaign and print result

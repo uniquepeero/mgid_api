@@ -176,69 +176,72 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
 def check_sites(stat, priceconv=None):
-	# Отформатированный список без camp id и даты
-	camp_id = list(stat.keys())[0]
-	f_stat = stat[camp_id]
-	f_stat = f_stat[list(f_stat.keys())[0]]
-	if len(f_stat) > 0:
-		log.debug(f'Зашли в camp id {camp_id}')
-		for key, value in f_stat.items():
-			# Если есть вложеные площадки - проходим по ним
-			if (key not in active[camp_id]['widgets']) or \
-				(key in active[camp_id]['widgets'] and len(active[camp_id]['widgets'][key]) > 4):
-				log.debug(f'Key {key} not in {active[camp_id]["widgets"]}')
-				if len(value['sources']) > 0:
-					sources = value['sources']
-					log.debug(f'Sources: {sources}')
-					for key1, value1 in sources.items():
-						if key in active[camp_id]['widgets']:
-							if int(key1) not in list(active[camp_id]["widgets"][key]):
-								if 'spent' in value1:
-									if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+	if stat is not None:
+		# Отформатированный список без camp id и даты
+		camp_id = list(stat.keys())[0]
+		f_stat = stat[camp_id]
+		f_stat = f_stat[list(f_stat.keys())[0]]
+		if len(f_stat) > 0:
+			log.debug(f'Зашли в camp id {camp_id}')
+			for key, value in f_stat.items():
+				# Если есть вложеные площадки - проходим по ним
+				if (key not in active[camp_id]['widgets']) or \
+					(key in active[camp_id]['widgets'] and len(active[camp_id]['widgets'][key]) > 4):
+					log.debug(f'Key {key} not in {active[camp_id]["widgets"]}')
+					if len(value['sources']) > 0:
+						sources = value['sources']
+						log.debug(f'Sources: {sources}')
+						for key1, value1 in sources.items():
+							if key in active[camp_id]['widgets']:
+								if int(key1) not in list(active[camp_id]["widgets"][key]):
+									if 'spent' in value1:
+										if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+											log.info(f'{camp_id} > {key}s{key1}\n'
+												f'(spent {value1["spent"]} and leads not found) is ready to disable')
+											disable_sites(f"{key}s{key1}", camp_id)
+										elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+											if 'buy' not in value1:
+												log.info(f'{camp_id} > {key}s{key1}\n'
+													f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
+												disable_sites(f'{key}s{key1}', camp_id)
+											elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
+												log.info(f'{camp_id} > {key}s{key1}\n'
+													f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+													f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+												disable_sites(f'{key}s{key1}', camp_id)
+							elif 'spent' in value1:
+								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+									log.info(f'{camp_id} > {key}s{key1}\n'
+										f'(spent {value1["spent"]} and leads not found) is ready to disable')
+									disable_sites(f"{key}s{key1}", camp_id)
+								elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+									if 'buy' not in value1:
 										log.info(f'{camp_id} > {key}s{key1}\n'
-											f'(spent {value1["spent"]} and leads not found) is ready to disable')
-										disable_sites(f"{key}s{key1}", camp_id)
-									elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
-										if 'buy' not in value1:
-											log.info(f'{camp_id} > {key}s{key1}\n'
-												f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
-											disable_sites(f'{key}s{key1}', camp_id)
-										elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
-											log.info(f'{camp_id} > {key}s{key1}\n'
-												f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-												f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-											disable_sites(f'{key}s{key1}', camp_id)
-						elif 'spent' in value1:
-							if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
-								log.info(f'{camp_id} > {key}s{key1}\n'
-									f'(spent {value1["spent"]} and leads not found) is ready to disable')
-								disable_sites(f"{key}s{key1}", camp_id)
-							elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
-								if 'buy' not in value1:
-									log.info(f'{camp_id} > {key}s{key1}\n'
-										f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
-									disable_sites(f'{key}s{key1}', camp_id)
-								elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
-									log.info(f'{camp_id} > {key}s{key1}\n'
-										f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-										f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-									disable_sites(f'{key}s{key1}', camp_id)
+											f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
+										disable_sites(f'{key}s{key1}', camp_id)
+									elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
+										log.info(f'{camp_id} > {key}s{key1}\n'
+											f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+											f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
+										disable_sites(f'{key}s{key1}', camp_id)
 
-				if 'spent' in value:
-					if value['spent'] > 10 and ('buy' and 'decision' not in value):
-						log.info(f'{camp_id} > {key}\n'
-							f'(spent {value["spent"]} and leads not found) is ready to disable')
-						disable_sites(f"{key}", camp_id)
-					elif (priceconv is not None) and (value['spent'] > priceconv * 3):
-						if 'buy' not in value:
+					if 'spent' in value:
+						if value['spent'] > 10 and ('buy' and 'decision' not in value):
 							log.info(f'{camp_id} > {key}\n'
-								f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
-							disable_sites(f'{key}', camp_id)
-						elif 'buy' in value and ((value['buy'] * priceconv - value['spent']) < priceconv):
-							log.info(f'{camp_id} > {key}\n'
-								f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
-								f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
-							disable_sites(f'{key}', camp_id)
+								f'(spent {value["spent"]} and leads not found) is ready to disable')
+							disable_sites(f"{key}", camp_id)
+						elif (priceconv is not None) and (value['spent'] > priceconv * 3):
+							if 'buy' not in value:
+								log.info(f'{camp_id} > {key}\n'
+									f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+								disable_sites(f'{key}', camp_id)
+							elif 'buy' in value and ((value['buy'] * priceconv - value['spent']) < priceconv):
+								log.info(f'{camp_id} > {key}\n'
+									f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
+									f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
+								disable_sites(f'{key}', camp_id)
+	else:
+		log.warning('Got None type in checksites(). Pass them')
 
 
 # Exclude site from campaign and print result

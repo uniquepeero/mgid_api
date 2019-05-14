@@ -10,7 +10,7 @@ APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-fh = logging.FileHandler("logs.log", 'w', encoding="utf-8",)
+fh = logging.FileHandler("logs.log", encoding="utf-8",)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 log.addHandler(fh)

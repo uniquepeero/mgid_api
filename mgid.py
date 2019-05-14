@@ -177,6 +177,9 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
 def check_sites(stat, priceconv=None):
+	if stat is None:
+		log.error('Got "None" stat variable')
+		return
 	# Отформатированный список без camp id и даты
 	camp_id = list(stat.keys())[0]
 	f_stat = stat[camp_id]
@@ -448,8 +451,8 @@ if __name__ == '__main__':
 				else:
 					check_sites(site_stats(camp))
 					check_teasers(user_teasers(camp))
-	#log.debug(site_stats(582530))
 
+	#log.debug(site_stats(582530))
 	# check_teasers(user_teasers(582530), 6, 582530)
 
 

@@ -9,8 +9,8 @@ import configparser
 APIURL = 'https://api.mgid.com/v1'
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)  # w - перезаписывает файл.
-fh = logging.FileHandler("logs.log", encoding="utf-8")
+log.setLevel(logging.INFO)
+fh = logging.FileHandler("logs.log", 'w', encoding="utf-8",)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 log.addHandler(fh)
@@ -63,6 +63,7 @@ def user_campaigns(camp_id=None):
 				log.error(f'user_campaigns(): {response.status_code}')
 		except Exception as e:
 			log.critical(f'user_campaigns(): {e}')
+
 
 def get_active_camps(camps):
 	active_dict = {}
@@ -176,72 +177,74 @@ def site_stats(camp_id, uid=None, dateinterval=None):
 
 # Проверяем сайты по заданным параметрам. Принимает словарь со статистикой по площадкам и доход конверсии
 def check_sites(stat, priceconv=None):
-	if stat is not None:
-		# Отформатированный список без camp id и даты
-		camp_id = list(stat.keys())[0]
-		f_stat = stat[camp_id]
-		f_stat = f_stat[list(f_stat.keys())[0]]
-		if len(f_stat) > 0:
-			log.debug(f'Зашли в camp id {camp_id}')
-			for key, value in f_stat.items():
-				# Если есть вложеные площадки - проходим по ним
-				if (key not in active[camp_id]['widgets']) or \
-					(key in active[camp_id]['widgets'] and len(active[camp_id]['widgets'][key]) > 4):
-					log.debug(f'Key {key} not in {active[camp_id]["widgets"]}')
-					if len(value['sources']) > 0:
-						sources = value['sources']
-						log.debug(f'Sources: {sources}')
-						for key1, value1 in sources.items():
-							if key in active[camp_id]['widgets']:
-								if int(key1) not in list(active[camp_id]["widgets"][key]):
-									if 'spent' in value1:
-										if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+	# Отформатированный список без camp id и даты
+	camp_id = list(stat.keys())[0]
+	f_stat = stat[camp_id]
+	f_stat = f_stat[list(f_stat.keys())[0]]
+	if len(f_stat) > 0:
+		log.debug(f'Зашли в camp id {camp_id}')
+		log.debug(f'Active widgets {active[camp_id]["widgets"]}')
+		for key, value in f_stat.items():
+			# Пропуск забагованной площадки
+			if str(key) == '5740564':
+				continue
+			# Проверка на причастность к списку отключенных площадок ИЛИ наличие в вайтлисте площадок
+			if (key not in active[camp_id]['widgets']) or \
+				(key in active[camp_id]['widgets'] and len(active[camp_id]['widgets'][key]) > 4):
+				log.debug(f'Checking key {key}')
+				# Наличие вложенных площадок
+				if len(value['sources']) > 0:
+					sources = value['sources']
+					log.debug(f'Sources: {sources}')
+					for key1, value1 in sources.items():
+						if key in active[camp_id]['widgets']:
+							if int(key1) not in list(active[camp_id]["widgets"][key]):
+								if 'spent' in value1:
+									if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+										log.info(f'{camp_id} > {key}s{key1}\n'
+											f'(spent {value1["spent"]} and leads not found) is ready to disable')
+										disable_sites(f"{key}s{key1}", camp_id)
+									elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+										if 'buy' not in value1:
 											log.info(f'{camp_id} > {key}s{key1}\n'
-												f'(spent {value1["spent"]} and leads not found) is ready to disable')
-											disable_sites(f"{key}s{key1}", camp_id)
-										elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
-											if 'buy' not in value1:
-												log.info(f'{camp_id} > {key}s{key1}\n'
-													f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
-												disable_sites(f'{key}s{key1}', camp_id)
-											elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
-												log.info(f'{camp_id} > {key}s{key1}\n'
-													f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-													f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-												disable_sites(f'{key}s{key1}', camp_id)
-							elif 'spent' in value1:
-								if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+												f'(spent {value1["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+											disable_sites(f'{key}s{key1}', camp_id)
+										elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv * -1):
+											log.info(f'{camp_id} > {key}s{key1}\n'
+												f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+												f'and profit is {(value1["buy"] * priceconv - value1["spent"])}) is ready to disable')
+											disable_sites(f'{key}s{key1}', camp_id)
+						elif 'spent' in value1:
+							if value1['spent'] > 10 and ('buy' and 'decision' not in value1):
+								log.info(f'{camp_id} > {key}s{key1}\n'
+									f'(spent {value1["spent"]} and leads not found) is ready to disable')
+								disable_sites(f"{key}s{key1}", camp_id)
+							elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
+								if 'buy' not in value1:
 									log.info(f'{camp_id} > {key}s{key1}\n'
-										f'(spent {value1["spent"]} and leads not found) is ready to disable')
-									disable_sites(f"{key}s{key1}", camp_id)
-								elif (priceconv is not None) and (value1['spent'] > priceconv * 3):
-									if 'buy' not in value1:
-										log.info(f'{camp_id} > {key}s{key1}\n'
-											f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
-										disable_sites(f'{key}s{key1}', camp_id)
-									elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv):
-										log.info(f'{camp_id} > {key}s{key1}\n'
-											f'(spent {value1["spent"]} > {priceconv} * 3)\n'
-											f'and profit is {(value1["buy"] * priceconv - value1["spent"]):.5}) is ready to disable')
-										disable_sites(f'{key}s{key1}', camp_id)
+										f'(spent {value1["spent"]} > {priceconv}* 3 and leads not found) is ready to disable')
+									disable_sites(f'{key}s{key1}', camp_id)
+								elif 'buy' in value1 and ((value1['buy'] * priceconv - value1['spent']) < priceconv * -1):
+									log.info(f'{camp_id} > {key}s{key1}\n'
+										f'(spent {value1["spent"]} > {priceconv} * 3)\n'
+										f'and profit is {(value1["buy"] * priceconv - value1["spent"])}) is ready to disable')
+									disable_sites(f'{key}s{key1}', camp_id)
 
-					if 'spent' in value:
-						if value['spent'] > 10 and ('buy' and 'decision' not in value):
+				if 'spent' in value:
+					if value['spent'] > 10 and ('buy' and 'decision' not in value):
+						log.info(f'{camp_id} > {key}\n'
+							f'(spent {value["spent"]} and leads not found) is ready to disable')
+						disable_sites(f"{key}", camp_id)
+					elif (priceconv is not None) and (value['spent'] > priceconv * 3):
+						if 'buy' not in value:
 							log.info(f'{camp_id} > {key}\n'
-								f'(spent {value["spent"]} and leads not found) is ready to disable')
-							disable_sites(f"{key}", camp_id)
-						elif (priceconv is not None) and (value['spent'] > priceconv * 3):
-							if 'buy' not in value:
-								log.info(f'{camp_id} > {key}\n'
-									f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
-								disable_sites(f'{key}', camp_id)
-							elif 'buy' in value and ((value['buy'] * priceconv - value['spent']) < priceconv):
-								log.info(f'{camp_id} > {key}\n'
-									f'(spent {value["spent"]} > {priceconv} * 3 and profit is'
-									f'{(value["buy"] * priceconv - value["spent"]):.5}) is ready to disable')
-								disable_sites(f'{key}', camp_id)
-	else:
-		log.warning('Got None type in checksites(). Pass them')
+								f'(spent {value["spent"]} > {priceconv} * 3 and leads not found) is ready to disable')
+							disable_sites(f'{key}', camp_id)
+						elif 'buy' in value and ((value['buy'] * priceconv - value['spent']) < priceconv * -1):
+							log.info(f'{camp_id} > {key}\n'
+								f'(spent {value["spent"]} > {priceconv} * 3 and profit is '
+								f'{(value["buy"] * priceconv - value["spent"])}) is ready to disable')
+							disable_sites(f'{key}', camp_id)
 
 
 # Exclude site from campaign and print result
@@ -298,8 +301,8 @@ def disable_sites(uid, camp_id):
 			log.critical(f'disable_sites: {e}')
 
 
-# Проверка тизеров по условиям. Принимает словарь тизеров от user_teasers.
-def check_teasers(tsrs, profit, camp_id):
+# Проверка тизеров по старым условиям. Принимает словарь тизеров от user_teasers.
+def check_teasers_old(tsrs, profit, camp_id):
 	highest_conv = 0
 	highest_roi = -10
 	highest_id = 0
@@ -378,6 +381,12 @@ def check_teasers(tsrs, profit, camp_id):
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
 
+def check_teasers(tsrs):
+	for key, value in tsrs.items():
+		if value['statistics']['spent'] > 10 and value['conversion']['interest_all'] == 0 and \
+			value['conversion']['decision_all'] == 0 and value['conversion']['buying_all'] == 0:
+			log.info(f'Teaser {key} is ready to disable')
+			disable_teaser(key)
 
 # Отключение тизера
 def disable_teaser(tsr_id):
@@ -390,12 +399,12 @@ def disable_teaser(tsr_id):
 				if str(response['id']) == str(tsr_id):
 					log.info(f'Teaser {tsr_id} disabled')
 				else:
-					log.warning(f'action_teaser: {response}')
+					log.warning(f'disable_teaser: {response}')
 		else:
-			log.error(f'action_teaser: {response.status_code}')
+			log.error(f'disable_teaser: {response.status_code}')
 
 	except Exception as e:
-		log.critical(f'action_teaser: {e}')
+		log.critical(f'disable_teaser: {e}')
 
 
 # Изменение цены за клик для тизера
@@ -432,13 +441,17 @@ if __name__ == '__main__':
 			for camp, values in active.items():
 				if camp == '582530':
 					check_sites(site_stats(camp), 6)
+					check_teasers(user_teasers(camp))
 				elif camp == '585301':
 					check_sites(site_stats(camp), 11.5)
+					check_teasers(user_teasers(camp))
 				else:
 					check_sites(site_stats(camp))
-	# log.debug(site_stats(584125))
-	# log.debug(f'{user_teasers(582530)}')
+					check_teasers(user_teasers(camp))
+	#log.debug(site_stats(582530))
+
 	# check_teasers(user_teasers(582530), 6, 582530)
+
 
 # TODO Функция проверки хороших площадок
 # TODO Функция увеличения коэф. хороших площадок

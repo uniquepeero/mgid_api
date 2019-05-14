@@ -382,16 +382,13 @@ def check_teasers_old(tsrs, profit, camp_id):
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
 
 def check_teasers(tsrs):
-	if type(tsrs) == 'dict':
+	if len(tsrs) > 5:
 		for key, value in tsrs.items():
-			if value['statistics']['spent'] > 10 and value['conversion']['interest_all'] == 0 and \
-				value['conversion']['decision_all'] == 0 and value['conversion']['buying_all'] == 0:
-				log.info(f'Teaser {key} in {value["campaignId"]} is ready to disable')
-				disable_teaser(key)
-	elif type(tsrs) == 'list':
-		log.warning(f'Got LIST teasers obj. Expected DICT:\n{tsrs}')
-	else:
-		log.error(f'Got unexpected teasers obj: {tsrs}')
+				if value['statistics']['spent'] > 10 and value['conversion']['interest_all'] == 0 and \
+					value['conversion']['decision_all'] == 0 and value['conversion']['buying_all'] == 0:
+					log.info(f'Teaser {key} in {value["campaignId"]} is ready to disable')
+					disable_teaser(key)
+
 
 # Отключение тизера
 def disable_teaser(tsr_id):

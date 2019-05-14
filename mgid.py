@@ -352,8 +352,7 @@ def check_teasers_old(tsrs, profit, camp_id):
 								highest_id = value1['id']
 							log.debug(f'(conv {conv} * profit {profit} - spent {spent}) / spent {spent} * 100 = {roi}')
 						log.debug(f'{highest_conv} / {highest_roi} / {highest_id}')
-						if highest_conv > 1:  # TODO Изменить 1 на нужное число
-							# TODO Присваивать не только первое значение? Или среднее? Или страны будут только одни?
+						if highest_conv > 1:
 							current_cpc = tsrs[highest_id]['priceOfClickByLocations'][0]['priceOfClick']
 							# Изменяем CPC. По стандарту на +0.5
 							change_cpc(highest_id, current_cpc)
@@ -375,12 +374,10 @@ def check_teasers_old(tsrs, profit, camp_id):
 		# CTR TASK 1
 		if value['statistics']['hits'] > 10000 and \
 			value['statistics']['clicks'] > 100 and float(value['statistics']['ctr']) < 0.2:
-			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CTR TASK 1): {key}')
 		# CLICKS TASK 1
 		if value['statistics']['clicks'] > 100 and value['conversion']['buying_all'] == 0:
-			# DEBUGOFF ВКЛЮЧИТЬ ПРИ УСТАНОВКЕ
 			# disable_teaser(key)
 			log.debug(f'TEASER IS READY TO DISABLE(CLICK TASK 1): {key}')
 
@@ -454,9 +451,3 @@ if __name__ == '__main__':
 
 	#log.debug(site_stats(582530))
 	# check_teasers(user_teasers(582530), 6, 582530)
-
-
-# TODO Функция проверки хороших площадок
-# TODO Функция увеличения коэф. хороших площадок
-# TODO Функция отслеживания изменений по хорошим площадкам \
-#  - записали значения до увеличения коэфа и сравнили их через неделю
